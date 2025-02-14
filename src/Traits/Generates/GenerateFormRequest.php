@@ -37,11 +37,11 @@ trait GenerateFormRequest
         });
 
         // Create folder for model requests
-        $folderName = "{$model}Request";
+        $folderName = "{$model}Requests";
         $requestName = "Store{$model}Request";
         $requestPath = app_path("Http/Requests/{$folderName}/{$requestName}.php");
 
-        // Check if the App\Http\Requests\{Model}Request directory exists, if not, create it
+        // Check if the App\Http\Requests\{Model}Requests directory exists, if not, create it
         if (!is_dir(app_path("Http/Requests/{$folderName}"))) {
             mkdir(app_path("Http/Requests/{$folderName}"), 0755, true);
         }
@@ -82,7 +82,6 @@ class {$requestName} extends FormRequest
     // stop validation in the first failure
     protected \$stopOnFirstFailure = false;
 
-
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -91,6 +90,19 @@ class {$requestName} extends FormRequest
     public function authorize()
     {
         return true;
+    }
+
+    /**
+     * Prepare the data for validation.
+     * This method is called before validation starts to clean or normalize inputs.
+     * 
+     * @return void
+     */
+    protected function prepareForValidation()
+    {
+        \$this->merge([
+            //
+        ]);
     }
 
     /**
@@ -105,27 +117,41 @@ class {$requestName} extends FormRequest
     }
 
     /**
-     *  method handles failure of Validation and return message
+     * Handle failed validation and return a JSON response with errors.
+     * 
      * @param \Illuminate\Contracts\Validation\Validator \$Validator
      * @throws \Illuminate\Http\Exceptions\HttpResponseException
      * @return never
      */
-    protected function failedValidation(Validator \$Validator){
+    protected function failedValidation(Validator \$Validator)
+    {
         \$errors = \$Validator->errors()->all();
         throw new HttpResponseException(\$this->errorResponse(\$errors,'Validation error',422));
     }
 
     /**
-     * Get the validation messagges that returned in response.
+     * Define human-readable attribute names for validation errors.
+     * 
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [{$this->generateAttributes($columns)}
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
      *
      * @return array
      */
-    public function messages() {
+    public function messages() 
+    {
         return [
-            //
+            'required' => 'The :attribute field is required.',
         ];
     }
-}\n";
+}";
             file_put_contents($requestPath, $requestContent);
             $this->info("FormRequest $requestName created successfully in folder $folderName.");
         }
@@ -161,11 +187,11 @@ class {$requestName} extends FormRequest
         });
 
         // Create folder for model requests
-        $folderName = "{$model}Request";
+        $folderName = "{$model}Requests";
         $requestName = "Update{$model}Request";
         $requestPath = app_path("Http/Requests/{$folderName}/{$requestName}.php");
 
-        // Check if the App\Http\Requests\{Model}Request directory exists, if not, create it
+        // Check if the App\Http\Requests\{Model}Requests directory exists, if not, create it
         if (!is_dir(app_path("Http/Requests/{$folderName}"))) {
             mkdir(app_path("Http/Requests/{$folderName}"), 0755, true);
         }
@@ -217,6 +243,19 @@ class {$requestName} extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     * This method is called before validation starts to clean or normalize inputs.
+     * 
+     * @return void
+     */
+    protected function prepareForValidation()
+    {
+        \$this->merge([
+            //
+        ]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array
@@ -228,18 +267,31 @@ class {$requestName} extends FormRequest
     }
 
     /**
-     *  method handles failure of Validation and return message
+     * Handle failed validation and return a JSON response with errors.
+     * 
      * @param \Illuminate\Contracts\Validation\Validator \$Validator
      * @throws \Illuminate\Http\Exceptions\HttpResponseException
      * @return never
      */
-    protected function failedValidation(Validator \$Validator){
+    protected function failedValidation(Validator \$Validator)
+    {
         \$errors = \$Validator->errors()->all();
         throw new HttpResponseException(\$this->errorResponse(\$errors,'Validation error',422));
     }
 
     /**
-     * Get the validation messagges that returned in response.
+     * Define human-readable attribute names for validation errors.
+     * 
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [{$this->generateAttributes($columns)}
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
      *
      * @return array
      */
@@ -248,10 +300,35 @@ class {$requestName} extends FormRequest
             //
         ];
     }
-
-}\n";
+}";
             file_put_contents($requestPath, $requestContent);
             $this->info("FormRequest $requestName created successfully in folder $folderName.");
         }
+    }
+
+    /**
+     * Generates an array of human-readable attribute names for validation errors.
+     *
+     * This method processes an array of column names, removing media-related suffixes
+     * (such as _img, _vid, _aud, _doc) and converting them into a more readable format.
+     *
+     * @param array $columns The list of column names to process.
+     * @return string A formatted string representing the attributes array.
+     */
+    private function generateAttributes(array $columns): string
+    {
+        $attributes = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
+        foreach ($columns as $column) {
+            // If the column name ends with any of the media suffixes, remove the suffix
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $column = Str::beforeLast($column, '_');
+            }
+            // Convert the column name into a headline
+            $attributes .= "\n            '$column' => '" . Str::headline($column) . "',";
+        }
+
+        return $attributes;
     }
 }
