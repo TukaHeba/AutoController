@@ -50,8 +50,10 @@ trait GenerateResource
             $this->info("Generating Resource for $model...");
 
             $assignments = "";
+            $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
             foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                if (Str::endsWith($column, $mediaSuffixes)) {
                     $assignments .= "\n            '{$column}' => asset(\$this->$column),";
                 } else {
                     $assignments .= "\n            '{$column}' => \$this->$column,";
@@ -74,7 +76,7 @@ class {$resourceName} extends JsonResource
      */
     public function toArray(\$request)
     {
-        return [            {$assignments}
+        return [{$assignments}
         ];
     }
 }\n";
