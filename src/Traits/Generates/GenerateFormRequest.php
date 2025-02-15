@@ -321,12 +321,16 @@ class {$requestName} extends FormRequest
         $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
 
         foreach ($columns as $column) {
-            // If the column name ends with any of the media suffixes, remove the suffix
-            if (Str::endsWith($column, $mediaSuffixes)) {
-                $column = Str::beforeLast($column, '_');
-            }
-            // Convert the column name into a headline
-            $attributes .= "\n            '$column' => '" . Str::headline($column) . "',";
+            // Use the original column name as the key
+            $key = $column;
+
+            // Remove media suffix for display names, when present
+            $value = Str::endsWith($column, $mediaSuffixes)
+                ? Str::beforeLast($column, '_')
+                : $column;
+
+            // Convert the value as a human-readable label
+            $attributes .= "\n            '$key' => '" . Str::headline($value) . "',";
         }
 
         return $attributes;
