@@ -2,7 +2,7 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
-use CodingPartners\AutoController\Helpers\helper;
+use CodingPartners\AutoController\Helpers\Suffix;
 use Illuminate\Support\Str;
 
 trait ControllerWithoutService
@@ -146,7 +146,7 @@ class {$controllerName} extends Controller
 
         foreach ($columns as $column) {
             if (Str::endsWith($column, $mediaSuffixes)) {
-                $suffix = helper::getSuffix($column);
+                $suffix = Suffix::getSuffix($column);
                 $assignments .= "\n                '$column' => \$this->storeFile(\$request->$column, \"{$model}\", \"{$suffix}\"),";
             } else {
                 $assignments .= "\n                '$column' => \$request->$column,";
@@ -227,7 +227,7 @@ class {$controllerName} extends Controller
 
         foreach ($columns as $column) {
             if (Str::endsWith($column, $mediaSuffixes)) {
-                $suffix = helper::getSuffix($column);
+                $suffix = Suffix::getSuffix($column);
                 $assignments .= "\n                \"$column\" => \$this->fileExists(\$request->$column, \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
             } else {
                 $assignments .= "\n                \"$column\" => \$request->$column,";

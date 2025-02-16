@@ -2,7 +2,7 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
-use CodingPartners\AutoController\Helpers\helper;
+use CodingPartners\AutoController\Helpers\Suffix;
 use Illuminate\Support\Str;
 
 trait GenerateService
@@ -131,7 +131,7 @@ class {$serviceName}
 
         foreach ($columns as $column) {
             if (Str::endsWith($column, $mediaSuffixes)) {
-                $suffix = helper::getSuffix($column);
+                $suffix = Suffix::getSuffix($column);
                 $assignments .= "\n                '$column' => \$this->storeFile(\$inputFields[\"$column\"], \"{$model}\", \"{$suffix}\"),";
             } else {
                 $assignments .= "\n                '$column' => \$inputFields[\"$column\"],";
@@ -221,7 +221,7 @@ class {$serviceName}
 
         foreach ($columns as $column) {
             if (Str::endsWith($column, $mediaSuffixes)) {
-                $suffix = helper::getSuffix($column);
+                $suffix = Suffix::getSuffix($column);
                 $assignments .= "\n                \"$column\" => \$this->fileExists(\$inputFields[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
             } else {
                 $assignments .= "\n                \"$column\" => \$inputFields[\"$column\"],";
