@@ -7,7 +7,6 @@ use Illuminate\Support\Str;
 
 trait ControllerWithoutService
 {
-
     /**
      * Generates a controller for a given model without using a service layer.
      *
@@ -55,8 +54,8 @@ use Illuminate\Http\Request;
 use CodingPartners\AutoController\Traits\ApiResponseTrait;
 use CodingPartners\AutoController\Traits\FileStorageTrait;
 use App\Http\Resources\\{$model}Resource;
-use App\Http\Requests\\{$model}Request\\Store{$model}Request;
-use App\Http\Requests\\{$model}Request\\Update{$model}Request;
+use App\Http\Requests\\{$model}Requests\\Store{$model}Request;
+use App\Http\Requests\\{$model}Requests\\Update{$model}Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class {$controllerName} extends Controller
@@ -76,7 +75,7 @@ class {$controllerName} extends Controller
         if ($softDelete)
             $content .= "{$this->generateSoftDeleteMethods($model,$columns)}";
 
-        $content .= "\n\n}";
+        $content .= "}\n";
 
         file_put_contents($controllerPath, $content);
 
@@ -143,8 +142,10 @@ class {$controllerName} extends Controller
         });
 
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+            if (Str::endsWith($column, $mediaSuffixes)) {
                 $suffix = helper::getSuffix($column);
                 $assignments .= "\n                '$column' => \$this->storeFile(\$request->$column, \"{$model}\", \"{$suffix}\"),";
             } else {
@@ -222,15 +223,17 @@ class {$controllerName} extends Controller
         });
 
         $assignments = "[";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix = helper::getSuffix($column);
-                    $assignments .= "\n                \"$column\" => \$this->fileExists(\$request->$column, \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
-                } else {
-                    $assignments .= "\n                \"$column\" => \$request->$column,";
-                }
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $suffix = helper::getSuffix($column);
+                $assignments .= "\n                \"$column\" => \$this->fileExists(\$request->$column, \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
+            } else {
+                $assignments .= "\n                \"$column\" => \$request->$column,";
+            }
         }
-        $assignments .= "\n        ]";
+        $assignments .= "\n            ]";
 
         return "/**
      * Update the specified resource in storage.
@@ -266,10 +269,11 @@ class {$controllerName} extends Controller
     protected function generateDestroy($model, $columns, $softDelete)
     {
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
 
         if (!$softDelete) {
             foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                if (Str::endsWith($column, $mediaSuffixes)) {
                     $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
                 }
             }
@@ -282,7 +286,7 @@ class {$controllerName} extends Controller
     {{$assignments}
         \${$model}->delete();
         return \$this->successResponse(null, \"{$model} Deleted Successfully\");
-    }\n\n";
+    }";
     }
 
     /**
@@ -390,8 +394,10 @@ class {$controllerName} extends Controller
     protected function generateForceDeleteMethod($model, $columns)
     {
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+            if (Str::endsWith($column, $mediaSuffixes)) {
                 $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
             }
         }
