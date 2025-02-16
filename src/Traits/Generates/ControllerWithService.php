@@ -48,8 +48,8 @@ use Illuminate\Http\Request;
 use App\Services\\{$model}Service;
 use App\Http\Resources\\{$model}Resource;
 use CodingPartners\AutoController\Traits\ApiResponseTrait;
-use App\Http\Requests\\{$model}Request\\Store{$model}Request;
-use App\Http\Requests\\{$model}Request\\Update{$model}Request;
+use App\Http\Requests\\{$model}Requests\\Store{$model}Request;
+use App\Http\Requests\\{$model}Requests\\Update{$model}Request;
 
 class {$controllerName} extends Controller
 {
@@ -61,10 +61,12 @@ class {$controllerName} extends Controller
     protected \${$model}Service;
 
     /**
-     *  {$model}Controller constructor
+     * {$model}Controller constructor
+     * 
      * @param {$model}Service \${$model}Service
      */
-    public function __construct({$model}Service \${$model}Service){
+    public function __construct({$model}Service \${$model}Service)
+    {
         \$this->{$model}Service = \${$model}Service;
     }
 
@@ -81,7 +83,7 @@ class {$controllerName} extends Controller
         if ($softDeleteMethods)
             $content .= "{$this->generateSoftDeleteMethodsWithService($model)}";
 
-        $content .= "\n\n}";
+        $content .= "}\n";
 
         file_put_contents($controllerPath, $content);
 
@@ -108,7 +110,7 @@ class {$controllerName} extends Controller
     public function index(Request \$request)
     {
         \$perPage = \$request->input('per_page', 10); // Default to 10 if not provided
-        \${$models} = \$this->{$model}Service->list{$model}(\$perPage);
+        \${$models} = \$this->{$model}Service->list{$models}(\$perPage);
         return \$this->resourcePaginated({$model}Resource::collection(\${$models}));
     }";
     }
@@ -145,8 +147,8 @@ class {$controllerName} extends Controller
      */
     public function store(Store{$model}Request \$request)
     {
-        \$fieldInputs = \$request->validated();
-        \${$model}    = \$this->{$model}Service->create{$model}(\$fieldInputs);
+        \$inputFields = \$request->validated();
+        \${$model} = \$this->{$model}Service->create{$model}(\$inputFields);
         return \$this->successResponse(new {$model}Resource(\${$model}), \"{$model} Created Successfully\", 201);
     }";
     }
@@ -190,9 +192,9 @@ class {$controllerName} extends Controller
         foreach ($columns as $column) {
             if ($column !== 'id' && $column !== 'created_at' && $column !== 'updated_at') {
                 if (Str::endsWith($column, '_img')) {
-                    $assignments .= "\n        \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\"),";
+                    $assignments .= "\n        \"$column\" => \$this->fileExists(\$inputFields[\"$column\"], \${$model}->$column, \"{$model}\"),";
                 } else {
-                    $assignments .= "\n        \"$column\" => \$fieldInputs[\"$column\"],";
+                    $assignments .= "\n        \"$column\" => \$inputFields[\"$column\"],";
                 }
             }
         }
@@ -203,8 +205,8 @@ class {$controllerName} extends Controller
      */
     public function update(Update{$model}Request \$request, $model \${$model})
     {
-        \$fieldInputs = \$request->validated();
-        \${$model}    = \$this->{$model}Service->update{$model}(\$fieldInputs, \${$model});
+        \$inputFields = \$request->validated();
+        \${$model} = \$this->{$model}Service->update{$model}(\$inputFields, \${$model});
         return \$this->successResponse(new {$model}Resource(\${$model}), \"{$model} Updated Successfully\", 200);
     }";
     }
@@ -229,7 +231,7 @@ class {$controllerName} extends Controller
     {
         \$this->{$model}Service->delete{$model}(\${$model});
         return \$this->successResponse(null, \"{$model} Deleted Successfully\");
-    }\n\n";
+    }";
     }
 
     /**
@@ -325,7 +327,6 @@ class {$controllerName} extends Controller
     {
         \$this->{$model}Service->forceDelete{$model}(\$id);
         return \$this->successResponse(null, \"{$model} deleted Permanently\");
-
     }";
     }
 }
