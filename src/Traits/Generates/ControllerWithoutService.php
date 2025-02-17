@@ -2,8 +2,9 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
-use CodingPartners\AutoController\Helpers\Suffix;
 use Illuminate\Support\Str;
+use CodingPartners\AutoController\Helpers\Suffix;
+use CodingPartners\AutoController\Helpers\ColumnFilter;
 
 trait ControllerWithoutService
 {
@@ -27,18 +28,8 @@ trait ControllerWithoutService
     {
         $this->info("Generating CRUD without service for $model...");
 
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'controller');;
 
         $controllerName = $model . 'Controller';
         $controllerPath = app_path("Http/Controllers/{$controllerName}.php");
@@ -128,18 +119,8 @@ class {$controllerName} extends Controller
      */
     protected function generateStore($model, array $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'controller');;
 
         $assignments = "";
         $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
@@ -209,18 +190,8 @@ class {$controllerName} extends Controller
      */
     protected function generateUpdate($model, array $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'controller');;
 
         $assignments = "[";
         $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];

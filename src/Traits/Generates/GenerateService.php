@@ -2,8 +2,9 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
-use CodingPartners\AutoController\Helpers\Suffix;
 use Illuminate\Support\Str;
+use CodingPartners\AutoController\Helpers\Suffix;
+use CodingPartners\AutoController\Helpers\ColumnFilter;
 
 trait GenerateService
 {
@@ -113,18 +114,8 @@ class {$serviceName}
      */
     protected function generateCreateMethodInService($model, $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'service');
 
         $assignments = "";
         $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
@@ -203,18 +194,8 @@ class {$serviceName}
      */
     protected function generateUpdateMethodInService($model, $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'service');;
 
         $assignments = "[";
         $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];

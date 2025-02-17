@@ -3,6 +3,7 @@
 namespace CodingPartners\AutoController\Traits\Generates;
 
 use Illuminate\Support\Str;
+use CodingPartners\AutoController\Helpers\ColumnFilter;
 
 trait GenerateResource
 {
@@ -23,18 +24,8 @@ trait GenerateResource
      */
     protected function generateResource($model, array $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'resource');
 
         $resourceName = $model . 'Resource';
         $resourcePath = app_path("Http/Resources/{$resourceName}.php");
