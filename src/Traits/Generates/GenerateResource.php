@@ -4,6 +4,7 @@ namespace CodingPartners\AutoController\Traits\Generates;
 
 use Illuminate\Support\Str;
 use CodingPartners\AutoController\Helpers\ColumnFilter;
+use CodingPartners\AutoController\Helpers\DirectoryMaker;
 
 trait GenerateResource
 {
@@ -31,9 +32,7 @@ trait GenerateResource
         $resourcePath = app_path("Http/Resources/{$resourceName}.php");
 
         // Check if the App\Http\Resources directory exists, if not, create it
-        if (!is_dir(app_path("Http/Resources"))) {
-            mkdir(app_path("Http/Resources"), 0755, true);
-        }
+        DirectoryMaker::createDirectory(app_path("Http/Resources"));
 
         // Check if the Resource class file exists, if not, create it
         if (!file_exists($resourcePath)) {

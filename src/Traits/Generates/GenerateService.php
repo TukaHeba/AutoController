@@ -5,6 +5,7 @@ namespace CodingPartners\AutoController\Traits\Generates;
 use Illuminate\Support\Str;
 use CodingPartners\AutoController\Helpers\Suffix;
 use CodingPartners\AutoController\Helpers\ColumnFilter;
+use CodingPartners\AutoController\Helpers\DirectoryMaker;
 
 trait GenerateService
 {
@@ -26,9 +27,7 @@ trait GenerateService
         $sevicePath = app_path("Services/{$serviceName}.php");
 
         // Check if the App\Services directory exists, if not, create it
-        if (!is_dir(app_path("Services"))) {
-            mkdir(app_path("Services"), 0755, true);
-        }
+        DirectoryMaker::createDirectory(app_path("Services"));
 
         // Check if the Service class file exists, if not, create it
         if (!file_exists($sevicePath)) {

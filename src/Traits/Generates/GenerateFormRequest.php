@@ -4,6 +4,7 @@ namespace CodingPartners\AutoController\Traits\Generates;
 
 use Illuminate\Support\Str;
 use CodingPartners\AutoController\Helpers\ColumnFilter;
+use CodingPartners\AutoController\Helpers\DirectoryMaker;
 
 trait GenerateFormRequest
 {
@@ -33,9 +34,7 @@ trait GenerateFormRequest
         $requestPath = app_path("Http/Requests/{$folderName}/{$requestName}.php");
 
         // Check if the App\Http\Requests\{Model}Requests directory exists, if not, create it
-        if (!is_dir(app_path("Http/Requests/{$folderName}"))) {
-            mkdir(app_path("Http/Requests/{$folderName}"), 0755, true);
-        }
+        DirectoryMaker::createDirectory(app_path("Http/Requests/{$folderName}"));
 
         // Check if the FormRequest class file exists, if not, create it
         if (!file_exists($requestPath)) {
@@ -174,9 +173,7 @@ class {$requestName} extends FormRequest
         $requestPath = app_path("Http/Requests/{$folderName}/{$requestName}.php");
 
         // Check if the App\Http\Requests\{Model}Requests directory exists, if not, create it
-        if (!is_dir(app_path("Http/Requests/{$folderName}"))) {
-            mkdir(app_path("Http/Requests/{$folderName}"), 0755, true);
-        }
+        DirectoryMaker::createDirectory(app_path("Http/Requests/{$folderName}"));
 
         // Check if the FormRequest class file exists, if not, create it
         if (!file_exists($requestPath)) {
