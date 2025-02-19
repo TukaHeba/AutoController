@@ -45,8 +45,8 @@ use Illuminate\Http\Request;
 use CodingPartners\AutoController\Traits\ApiResponseTrait;
 use CodingPartners\AutoController\Traits\FileStorageTrait;
 use App\Http\Resources\\{$model}Resource;
-use App\Http\Requests\\{$model}Requests\\Store{$model}Request;
-use App\Http\Requests\\{$model}Requests\\Update{$model}Request;
+use App\Http\Requests\\{$model}\\Store{$model}Request;
+use App\Http\Requests\\{$model}\\Update{$model}Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class {$controllerName} extends Controller

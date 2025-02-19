@@ -39,8 +39,8 @@ use Illuminate\Http\Request;
 use App\Services\\{$model}Service;
 use App\Http\Resources\\{$model}Resource;
 use CodingPartners\AutoController\Traits\ApiResponseTrait;
-use App\Http\Requests\\{$model}Requests\\Store{$model}Request;
-use App\Http\Requests\\{$model}Requests\\Update{$model}Request;
+use App\Http\Requests\\{$model}\\Store{$model}Request;
+use App\Http\Requests\\{$model}\\Update{$model}Request;
 
 class {$controllerName} extends Controller
 {
