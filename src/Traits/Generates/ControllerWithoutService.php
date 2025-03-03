@@ -2,12 +2,12 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
-use CodingPartners\AutoController\Helpers\helper;
 use Illuminate\Support\Str;
+use CodingPartners\AutoController\Helpers\Suffix;
+use CodingPartners\AutoController\Helpers\ColumnFilter;
 
 trait ControllerWithoutService
 {
-
     /**
      * Generates a controller for a given model without using a service layer.
      *
@@ -28,18 +28,8 @@ trait ControllerWithoutService
     {
         $this->info("Generating CRUD without service for $model...");
 
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'controller');;
 
         $controllerName = $model . 'Controller';
         $controllerPath = app_path("Http/Controllers/{$controllerName}.php");
@@ -55,8 +45,8 @@ use Illuminate\Http\Request;
 use CodingPartners\AutoController\Traits\ApiResponseTrait;
 use CodingPartners\AutoController\Traits\FileStorageTrait;
 use App\Http\Resources\\{$model}Resource;
-use App\Http\Requests\\{$model}Request\\Store{$model}Request;
-use App\Http\Requests\\{$model}Request\\Update{$model}Request;
+use App\Http\Requests\\{$model}\\Store{$model}Request;
+use App\Http\Requests\\{$model}\\Update{$model}Request;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class {$controllerName} extends Controller
@@ -76,7 +66,7 @@ class {$controllerName} extends Controller
         if ($softDelete)
             $content .= "{$this->generateSoftDeleteMethods($model,$columns)}";
 
-        $content .= "\n\n}";
+        $content .= "}\n";
 
         file_put_contents($controllerPath, $content);
 
@@ -129,23 +119,15 @@ class {$controllerName} extends Controller
      */
     protected function generateStore($model, array $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'controller');;
 
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                $suffix = helper::getSuffix($column);
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $suffix = Suffix::getSuffix($column);
                 $assignments .= "\n                '$column' => \$this->storeFile(\$request->$column, \"{$model}\", \"{$suffix}\"),";
             } else {
                 $assignments .= "\n                '$column' => \$request->$column,";
@@ -208,29 +190,21 @@ class {$controllerName} extends Controller
      */
     protected function generateUpdate($model, array $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'controller');;
 
         $assignments = "[";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix = helper::getSuffix($column);
-                    $assignments .= "\n                \"$column\" => \$this->fileExists(\$request->$column, \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
-                } else {
-                    $assignments .= "\n                \"$column\" => \$request->$column,";
-                }
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $suffix = Suffix::getSuffix($column);
+                $assignments .= "\n                \"$column\" => \$this->fileExists(\$request->$column, \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
+            } else {
+                $assignments .= "\n                \"$column\" => \$request->$column,";
+            }
         }
-        $assignments .= "\n        ]";
+        $assignments .= "\n            ]";
 
         return "/**
      * Update the specified resource in storage.
@@ -266,10 +240,11 @@ class {$controllerName} extends Controller
     protected function generateDestroy($model, $columns, $softDelete)
     {
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
 
         if (!$softDelete) {
             foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                if (Str::endsWith($column, $mediaSuffixes)) {
                     $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
                 }
             }
@@ -282,7 +257,7 @@ class {$controllerName} extends Controller
     {{$assignments}
         \${$model}->delete();
         return \$this->successResponse(null, \"{$model} Deleted Successfully\");
-    }\n\n";
+    }";
     }
 
     /**
@@ -390,8 +365,10 @@ class {$controllerName} extends Controller
     protected function generateForceDeleteMethod($model, $columns)
     {
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+            if (Str::endsWith($column, $mediaSuffixes)) {
                 $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
             }
         }

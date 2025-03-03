@@ -3,6 +3,8 @@
 namespace CodingPartners\AutoController\Traits\Generates;
 
 use Illuminate\Support\Str;
+use CodingPartners\AutoController\Helpers\ColumnFilter;
+use CodingPartners\AutoController\Helpers\DirectoryMaker;
 
 trait GenerateResource
 {
@@ -23,26 +25,14 @@ trait GenerateResource
      */
     protected function generateResource($model, array $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'resource');
 
         $resourceName = $model . 'Resource';
         $resourcePath = app_path("Http/Resources/{$resourceName}.php");
 
         // Check if the App\Http\Resources directory exists, if not, create it
-        if (!is_dir(app_path("Http/Resources"))) {
-            mkdir(app_path("Http/Resources"), 0755, true);
-        }
+        DirectoryMaker::createDirectory(app_path("Http/Resources"));
 
         // Check if the Resource class file exists, if not, create it
         if (!file_exists($resourcePath)) {
@@ -50,8 +40,10 @@ trait GenerateResource
             $this->info("Generating Resource for $model...");
 
             $assignments = "";
+            $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
             foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                if (Str::endsWith($column, $mediaSuffixes)) {
                     $assignments .= "\n            '{$column}' => asset(\$this->$column),";
                 } else {
                     $assignments .= "\n            '{$column}' => \$this->$column,";
@@ -74,7 +66,7 @@ class {$resourceName} extends JsonResource
      */
     public function toArray(\$request)
     {
-        return [            {$assignments}
+        return [{$assignments}
         ];
     }
 }\n";

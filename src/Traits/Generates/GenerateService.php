@@ -2,8 +2,10 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
-use CodingPartners\AutoController\Helpers\helper;
 use Illuminate\Support\Str;
+use CodingPartners\AutoController\Helpers\Suffix;
+use CodingPartners\AutoController\Helpers\ColumnFilter;
+use CodingPartners\AutoController\Helpers\DirectoryMaker;
 
 trait GenerateService
 {
@@ -24,12 +26,10 @@ trait GenerateService
         $serviceName = $model . 'Service';
         $sevicePath = app_path("Services/{$serviceName}.php");
 
-        // Check if the App\Http\Requests\{Model}Request directory exists, if not, create it
-        if (!is_dir(app_path("Services"))) {
-            mkdir(app_path("Services"), 0755, true);
-        }
+        // Check if the App\Services directory exists, if not, create it
+        DirectoryMaker::createDirectory(app_path("Services"));
 
-        // Check if the Resource class file exists, if not, create it
+        // Check if the Service class file exists, if not, create it
         if (!file_exists($sevicePath)) {
 
             $this->info("Generating Service for $model...");
@@ -53,7 +53,7 @@ class {$serviceName}
 
     {$this->generateCreateMethodInService($model,$columns)}
 
-    {$this->generategetMethodInService($model)}
+    {$this->generateGetMethodInService($model)}
 
     {$this->generateUpdateMethodInService($model,$columns)}
 
@@ -63,7 +63,7 @@ class {$serviceName}
                 $srviceContent .= "{$this->generateSoftDeleteMethodsInService($model,$columns)}";
             }
 
-            $srviceContent .= "\n\n}";
+            $srviceContent .= "}\n";
 
             file_put_contents($sevicePath, $srviceContent);
             $this->info("Service $serviceName created successfully.");
@@ -86,13 +86,14 @@ class {$serviceName}
         $models = Str::plural($model);
 
         return "/**
-     * list all {$models} information
+     * List all {$models} information
      */
-    public function list{$model}(int \$perPage) {
+    public function list{$models}(int \$perPage)
+    {
         try {
             return {$model}::paginate(\$perPage);
         } catch (Exception \$e) {
-            Log::error('Error Listing {$model} '. \$e->getMessage());
+            Log::error('Error Listing {$model} ' . \$e->getMessage());
             throw new Exception('there is something wrong in server');
         }
     }";
@@ -104,53 +105,45 @@ class {$serviceName}
      * This method creates a new instance of the {$model} model and saves it to the database.
      * It iterates through the provided $columns array, excluding the 'id', 'created_at', and 'updated_at' columns.
      * If the column name ends with '_img', it calls the `storeFile()` method to store the file and assigns the file path to the corresponding column.
-     * Otherwise, it assigns the value from the $fieldInputs array to the corresponding column.
+     * Otherwise, it assigns the value from the $inputFields array to the corresponding column.
      * Finally, it creates the new {$model} instance and returns it.
      *
-     * @param array $fieldInputs An associative array containing the input values for the new {$model} instance.
+     * @param array $inputFields An associative array containing the input values for the new {$model} instance.
      * @return \App\Models\\{$model} The newly created {$model} instance.
      */
     protected function generateCreateMethodInService($model, $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'service');
 
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                $suffix = helper::getSuffix($column);
-                $assignments .= "\n                    '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\", \"{$suffix}\"),";
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $suffix = Suffix::getSuffix($column);
+                $assignments .= "\n                '$column' => \$this->storeFile(\$inputFields[\"$column\"], \"{$model}\", \"{$suffix}\"),";
             } else {
-                $assignments .= "\n                    '$column' => \$fieldInputs[\"$column\"],";
+                $assignments .= "\n                '$column' => \$inputFields[\"$column\"],";
             }
         }
 
         return "/**
      * Create a new {$model}.
-     * @param array \$fieldInputs
+     * 
+     * @param array \$inputFields
      * @return \App\Models\\{$model}
      */
-    public function create{$model}(array \$fieldInputs)
+    public function create{$model}(array \$inputFields)
     {
-        try{
+        try {
             return {$model}::create([{$assignments}
             ]);
         } catch (Exception \$e) {
             Log::error('Error creating {$model}: ' . \$e->getMessage());
             throw new Exception('there is something wrong in server');
         }
-    }
-    ";
+    }";
     }
 
     /**
@@ -164,7 +157,7 @@ class {$serviceName}
      * @param \App\Models\\{$model} \${$model} The model instance to be retrieved.
      * @return \App\Models\\{$model} The retrieved model instance.
      */
-    protected function generategetMethodInService($model)
+    protected function generateGetMethodInService($model)
     {
         return "/**
      * Get the details of a specific {$model}.
@@ -194,44 +187,37 @@ class {$serviceName}
      * Finally, the method updates the model instance with the filtered data array and returns the updated model instance.
      * The method is designed to handle any exceptions that may occur during the update process and logs the error message to the system log.
      *
-     * @param array $fieldInputs The array of field inputs to be updated.
+     * @param array $inputFields The array of field inputs to be updated.
      * @param \App\Models\\{$model} \${$model} The model instance to be updated.
      * @return \App\Models\\{$model} The updated model instance.
      */
     protected function generateUpdateMethodInService($model, $columns)
     {
-        // Remove unwanted columns
-        $columns = array_filter($columns, function ($column) use ($model) {
-            // Common exclusions
-            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
-
-            // Additional exclusions for User model
-            if ($model === 'User') {
-                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
-            }
-
-            return !in_array($column, $excludedColumns);
-        });
+        // Get the needed columns from the provided model
+        $columns = ColumnFilter::getFilteredColumns($model, $columns, 'service');;
 
         $assignments = "[";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix = helper::getSuffix($column);
-                    $assignments .= "\n                    \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
-                } else {
-                    $assignments .= "\n                    \"$column\" => \$fieldInputs[\"$column\"],";
-                }
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $suffix = Suffix::getSuffix($column);
+                $assignments .= "\n                \"$column\" => \$this->fileExists(\$inputFields[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
+            } else {
+                $assignments .= "\n                \"$column\" => \$inputFields[\"$column\"],";
+            }
         }
-        $assignments .= "\n        ]";
+        $assignments .= "\n            ]";
 
         return "/**
      * Update a specific {$model}.
      *
-     * @param array \$fieldInputs
+     * @param array \$inputFields
      * @param {$model} \${$model}
      * @return \App\Models\\{$model}
      */
-    public function update{$model}(array \$fieldInputs, \${$model}) {
+    public function update{$model}(array \$inputFields, \${$model})
+    {
         try {
             \$data = {$assignments};
             \${$model}->update(array_filter(\$data));
@@ -263,10 +249,12 @@ class {$serviceName}
     protected function generateDeleteMethodInService($model, $columns, $softDelete)
     {
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         if (!$softDelete) {
             foreach ($columns as $column) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
+                if (Str::endsWith($column, $mediaSuffixes)) {
+                    $assignments .= "\n            \$this->deleteFile(\${$model}->{$column});";
                 }
             }
         }
@@ -277,11 +265,12 @@ class {$serviceName}
      * @param {$model} \${$model}
      * @return void
      */
-    public function delete{$model}(\${$model}){
+    public function delete{$model}(\${$model})
+    {
         try {{$assignments}
             \${$model}->delete();
         } catch (Exception \$e) {
-            Log::error('Error deleting {$model} '. \$e->getMessage());
+            Log::error('Error deleting {$model} ' . \$e->getMessage());
             throw new Exception('there is something wrong in server');
         }
     }";
@@ -333,7 +322,7 @@ class {$serviceName}
         try {
             return {$model}::onlyTrashed()->paginate(\$perPage);
         } catch (Exception \$e) {
-            Log::error('Error Trashing {$model} '. \$e->getMessage());
+            Log::error('Error Trashing {$model} ' . \$e->getMessage());
             throw new Exception('there is something wrong in server');
         }
     }";
@@ -364,7 +353,7 @@ class {$serviceName}
      */
     public function restore{$model}(\$id)
     {
-        try{
+        try {
             \${$model} = {$model}::onlyTrashed()->findOrFail(\$id);
             \${$model}->restore();
             return \${$model};
@@ -395,9 +384,11 @@ class {$serviceName}
     protected function generateForceDeleteMethodInService($model, $columns)
     {
         $assignments = "";
+        $mediaSuffixes = ['_img', '_vid', '_aud', '_doc'];
+
         foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
+            if (Str::endsWith($column, $mediaSuffixes)) {
+                $assignments .= "\n            \$this->deleteFile(\${$model}->{$column});";
             }
         }
 
@@ -412,7 +403,7 @@ class {$serviceName}
      */
     public function forceDelete{$model}(\$id)
     {
-        try{
+        try {
             \${$model} = {$model}::onlyTrashed()->findOrFail(\$id);
             {$assignments}
             \${$model}->forceDelete();
@@ -420,7 +411,7 @@ class {$serviceName}
             Log::error('{$model} not found: ' . \$e->getMessage());
             throw new Exception('{$model} not found.');
         } catch (Exception \$e) {
-            Log::error('Error force deleting {$model} '. \$e->getMessage());
+            Log::error('Error force deleting {$model} ' . \$e->getMessage());
             throw new Exception('there is something wrong in server');
         }
     }";
